@@ -74,6 +74,11 @@ def run_discord_bot():
     """
     Run the Discord bot.
     """
+    # Check if the DISCORD_API_KEY is set
+    if DISCORD_API_KEY is None:
+        logger.error("DISCORD_API_KEY is not set in the environment variables. Please check your .env file.")
+        return
+
     # Set the appropriate intents for the bot to listen for message events
     intents = discord.Intents.default()
     intents.message_content = True
@@ -88,12 +93,26 @@ def run_discord_bot():
 
     @client.event
     async def on_message(message):
-        # Handle incoming messages from users
-        if message.author == client.user:
-            return
+        try:
+            # Handle incoming messages from users
+            if message.author == client.user:
+                return
 
-        # Create an asyncio task to process the message concurrently
-        asyncio.create_task(process_message(message))
+            # Check if the bot is mentioned in the message
+            if client.user in message.mentions:
+                # Log the incoming message
+                logger.info(f'Message received from {message.author}: "{message.content}"')
+                
+                # Create an asyncio task to process the message concurrently
+                asyncio.create_task(process_message(message))
+            else:
+                # Log if the bot was not mentioned in the message
+                logger.info(f'Message received but bot not mentioned by {message.author}: "{message.content}"')
+        except Exception as e:
+            # Handle any errors that might occur
+            error_msg = f"Error in on_message: {str(e)}"
+            logger.error(error_msg)
+            await message.channel.send(error_msg)
 
     try:
         # Run the Discord bot using the API token
